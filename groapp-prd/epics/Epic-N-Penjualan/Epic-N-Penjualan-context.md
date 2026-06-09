@@ -1,7 +1,7 @@
 # PRD - [Nama Epic]
 
 ## Business Process Diagram
-
+```mermaid
 flowchart TD
 
 A([Customer ingin membeli barang/jasa])
@@ -76,6 +76,10 @@ AK --> AL[Jika perlu, buat invoice baru]
 AL --> M
 
 AJ -->|Tidak| W
+```
+
+
+
 
 ## Problem Statement Epic
 
