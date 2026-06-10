@@ -121,29 +121,141 @@ Epic Penjualan bertujuan membantu UMKM mengelola siklus penjualan secara sederha
 
 ```mermaid
 flowchart TD
-    A[Start] --> B[Flow utama]
-    B --> C[End]
+    A[User membuka daftar penjualan] --> B[User memilih aksi buat transaksi penjualan baru]
+    B --> C[Sistem menampilkan form transaksi penjualan]
+    C --> D[User mengisi data transaksi penjualan:<br/>customer, tanggal transaksi,<br/>item barang/jasa, qty, harga,<br/>pajak jika berlaku, rencana pembayaran]
+    D --> E[Sistem memvalidasi data transaksi penjualan]
+    E --> F{Apakah data transaksi valid?}
+
+    F -->|Tidak| G[Sistem menampilkan pesan error pada field yang tidak valid]
+    G --> D
+
+    F -->|Ya| H[Sistem menyimpan transaksi sebagai draft]
+    H --> I[User meninjau draft transaksi penjualan]
+    I --> J{Apa aksi user terhadap draft?}
+
+    J -->|Ubah draft| D
+    J -->|Batalkan draft| AK[Sistem membatalkan draft transaksi penjualan<br/>tanpa dampak akuntansi]
+    AK --> AL([End: Flow draft penjualan dibatalkan])
+
+    J -->|Terbitkan invoice final| K[Sistem mengecek rencana pembayaran transaksi]
+    K --> L{Apa rencana pembayaran transaksi?}
+
+    L -->|Cash / lunas langsung| M[Sistem menerbitkan invoice final]
+    M --> N[Sistem mencatat pembayaran penuh]
+    N --> O[Sistem mengubah status invoice menjadi Lunas]
+    O --> AA[Sistem menampilkan invoice final di daftar penjualan]
+
+    L -->|Tagihan / bayar nanti| P[Sistem menerbitkan invoice final]
+    P --> Q[Sistem mencatat invoice sebagai piutang usaha]
+    Q --> R[Sistem mengubah status invoice menjadi Belum Dibayar]
+    R --> AA
+
+    L -->|DP / bayar sebagian| S[Sistem menerbitkan invoice final]
+    S --> T[Sistem mencatat pembayaran awal / DP]
+    T --> U[Sistem mencatat sisa tagihan sebagai piutang usaha]
+    U --> V[Sistem mengubah status invoice menjadi Dibayar Sebagian]
+    V --> AA
+
+    L -->|Cicilan / termin sederhana| W[Sistem menerbitkan invoice final]
+    W --> X[Sistem mencatat invoice sebagai tagihan termin sederhana]
+    X --> Y[Sistem mencatat sisa tagihan sebagai piutang usaha]
+    Y --> Z[Sistem mengubah status invoice menjadi Belum Lunas]
+    Z --> AA
+
+    AA --> AB[User membuka detail invoice final]
+    AB --> AC[Sistem menampilkan detail invoice final]
+    AC --> AD[User memilih aksi terhadap invoice]
+    AD --> AE{Aksi apa yang dipilih user?}
+
+    AE -->|Unduh invoice| AF[Sistem menyiapkan file invoice untuk diunduh]
+    AF --> AG[User mengunduh invoice]
+    AG --> AJ([End: Flow pembuatan transaksi penjualan dan invoice selesai])
+
+    AE -->|Bagikan invoice| AH[Sistem menyiapkan opsi berbagi invoice]
+    AH --> AI[User membagikan invoice ke customer]
+    AI --> AJ
+
+    AE -->|Tidak ada aksi lanjutan| AJ
 ```
 
 ## Role Access Matrix
 
-| Fitur        | Role 1 | Role 2 | Role 3 | Role 4 |
-| ------------ | ------ | ------ | ------ | ------ |
-| [Nama Fitur] | ✓      | ✓      | -      | -      |
+| Aksi / Fitur                                  | Pemilik Usaha | Administrator Perusahaan | Admin Keuangan | Kasir | Catatan                                                                                         |
+| --------------------------------------------- | ------------: | -----------------------: | -------------: | ----: | ----------------------------------------------------------------------------------------------- |
+| Melihat daftar transaksi penjualan            |          true |                     true |           true |  true |                                                                                                 |
+| Melihat detail transaksi penjualan            |          true |                     true |           true |  true |                                                                                                 |
+| Membuat draft transaksi penjualan             |          true |                     true |           true |  true | Kasir hanya boleh membuat transaksi cash/lunas langsung                                         |
+| Mengubah draft transaksi penjualan            |          true |                     true |           true | false |                                                                                                 |
+| Membatalkan draft transaksi penjualan         |          true |                     true |           true | false |                                                                                                 |
+| Menerbitkan invoice final                     |          true |                     true |           true |  true | Kasir hanya boleh menerbitkan invoice cash/lunas langsung                                       |
+| Mencatat pembayaran invoice                   |          true |                     true |           true |  true | Kasir hanya boleh mencatat pembayaran untuk transaksi cash/lunas langsung saat transaksi dibuat |
+| Melihat daftar piutang usaha                  |          true |                     true |           true | false |                                                                                                 |
+| Melihat detail piutang per customer / invoice |          true |                     true |           true | false |                                                                                                 |
+| Menandai / memproses invoice overdue          |          true |                     true |           true | false |                                                                                                 |
+| Mengunduh invoice                             |          true |                     true |           true |  true | Kasir hanya untuk invoice cash/lunas langsung                                                   |
+| Membagikan invoice                            |          true |                     true |           true |  true | Kasir hanya untuk invoice cash/lunas langsung                                                   |
+
 
 ## Scope
 
 ### In
 
-* [Scope in]
+* ## Scope
+
+### In Scope
+
+* **Pencatatan Transaksi Penjualan**  
+  Sistem mendukung pencatatan transaksi penjualan barang/jasa sebagai dasar pembuatan invoice dan pencatatan keuangan penjualan.
+
+* **Pembuatan Draft Penjualan**  
+  Sistem mendukung pembuatan transaksi penjualan sebagai draft sebelum diterbitkan menjadi invoice final, termasuk pengisian data customer, item, qty, harga, pajak jika berlaku, tanggal transaksi, dan rencana pembayaran.
+
+* **Penerbitan Invoice Final**  
+  Sistem mendukung penerbitan invoice final dari draft penjualan yang sudah valid, dengan status dan dampak keuangan yang terbentuk sesuai kondisi transaksi.
+
+* **Pencatatan Pembayaran Penjualan**  
+  Sistem mendukung pencatatan pembayaran penuh maupun sebagian yang terhubung ke invoice penjualan, sehingga status dan sisa tagihan dapat diperbarui secara konsisten.
+
+* **Pengelolaan Status Invoice**  
+  Sistem mendukung perubahan status invoice berdasarkan kondisi pembayaran dan jatuh tempo, seperti lunas, belum dibayar, dibayar sebagian, belum lunas, atau jatuh tempo.
+
+* **Pemantauan Piutang Usaha**  
+  Sistem mendukung pemantauan piutang usaha berdasarkan invoice yang belum lunas, termasuk informasi customer, sisa tagihan, dan jatuh tempo.
+
+* **Pembatalan Draft Penjualan**  
+  Sistem mendukung pembatalan draft penjualan sebelum invoice final diterbitkan, tanpa membentuk dampak akuntansi.
+
+* **Koreksi / Reversal Invoice Final**  
+  Sistem mendukung koreksi atau reversal untuk invoice final yang perlu dibatalkan, agar perubahan atas transaksi final tetap memiliki jejak dan dampak akuntansi yang terkontrol.
 
 ### Planned
 
-* [Planned scope / planned features]
+### Future Capability
+
+| Capability | Deskripsi Fungsional | Kapan Dikerjakan |
+|---|---|---|
+| Reminder Tagihan Otomatis | Sistem dapat membantu user mengirim atau menjadwalkan pengingat tagihan kepada customer berdasarkan invoice yang belum lunas dan tanggal jatuh tempo. | Setelah pemantauan piutang dasar stabil dan pola penagihan user sudah tervalidasi. |
+| Tren Penjualan | Sistem dapat menampilkan ringkasan tren penjualan berdasarkan periode, customer, status invoice, atau performa transaksi untuk membantu user memahami perkembangan penjualan. | Setelah data transaksi penjualan cukup konsisten dan kebutuhan analitik sudah lebih jelas. |
+| Skema Termin Lanjutan | Sistem dapat mendukung pengaturan termin pembayaran yang lebih kompleks, seperti beberapa tanggal jatuh tempo, persentase per termin, atau rule pembayaran bertahap yang lebih fleksibel. | Setelah kebutuhan termin sederhana terbukti digunakan dan ditemukan kebutuhan variasi pembayaran yang lebih kompleks. |
+| Integrasi Payment Gateway | Sistem dapat menerima pembayaran online dan mencocokkannya otomatis dengan invoice penjualan. | Setelah pencatatan pembayaran manual stabil dan kebutuhan pembayaran online menjadi prioritas. |
+| Bagikan Invoice Otomatis ke Customer | Sistem dapat mengirim invoice secara otomatis melalui channel tertentu, misalnya email atau WhatsApp, setelah invoice final diterbitkan. | Setelah format invoice dan flow penerbitan invoice final sudah stabil. |
 
 ### Out of Scope
 
-* [Out of scope]
+### Out of Scope
+
+| Item | Catatan |
+|---|---|
+| Manajemen Inventory / Stok Barang | Epic Penjualan tidak mengelola stok, pergerakan barang, stok masuk/keluar, atau penyesuaian persediaan. |
+| Pembelian / Pengadaan | Epic Penjualan tidak mencakup proses pembelian barang/jasa dari supplier, purchase order, atau pencatatan hutang usaha. |
+| Retur Pembelian | Retur pembelian merupakan bagian dari proses pengadaan/pembelian, bukan penjualan. |
+| Payroll / Penggajian | Epic Penjualan tidak mencakup perhitungan gaji, komisi, bonus, atau pembayaran karyawan. |
+| Manajemen Kas dan Bank Umum | Epic Penjualan hanya mencatat pembayaran yang terkait invoice penjualan, bukan pengelolaan kas/bank secara umum seperti transfer antar akun atau rekonsiliasi bank. |
+| CRM Lanjutan | Epic Penjualan tidak mencakup pengelolaan pipeline sales, follow-up prospek, segmentasi customer, atau aktivitas customer relationship management lanjutan. |
+| E-commerce / Marketplace Integration | Epic Penjualan tidak mencakup sinkronisasi order dari marketplace, toko online, atau channel penjualan eksternal. |
+| Point of Sale Lengkap | Epic Penjualan tidak mencakup kemampuan POS lengkap seperti shift kasir, cash drawer, barcode scanner, receipt printer, atau closing kasir. |
+| Laporan Keuangan Lengkap | Epic Penjualan hanya membentuk data dan jurnal terkait penjualan, bukan laporan keuangan lengkap seperti neraca, laba rugi, atau arus kas. |
 
 ## Aturan Bisnis Epic
 
